@@ -1,59 +1,53 @@
 import PropTypes from 'prop-types';
-import { cloneElement, Component } from 'react';
+import { cloneElement, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { transitionDuration } from 'constants/theme';
 import { Backdrop, ModalContainer, ModalTitle } from './Modal.styled';
 
-export class Modal extends Component {
-  state = {
-    isMounted: false,
-  };
+export const Modal = ({ title, onClose, prevOnKeyDown, children }) => {
+  const [isMounted, setIsMounted] = useState(false);
 
-  componentDidMount() {
+  useEffect(() => {
     requestAnimationFrame(() => {
-      this.setState({ isMounted: true });
+      setIsMounted(true);
+    });
+  }, []);
+
+  const onModalClose = () => {
+    onkeydown = prevOnKeyDown;
+
+    requestAnimationFrame(() => {
+      setIsMounted(false);
     });
 
-    onkeydown = this.onEscPress;
-  }
+    setTimeout(onClose, transitionDuration);
+  };
 
-  onEscPress = ({ code }) => {
+  const onEscPress = ({ code }) => {
     if (code !== 'Escape') return;
 
-    this.onClose();
+    onModalClose();
   };
 
-  onClose = () => {
-    requestAnimationFrame(() => {
-      this.setState({ isMounted: false });
-    });
-
-    onkeydown = null;
-
-    setTimeout(this.props.onClose, transitionDuration);
+  const onBackdropClick = ({ currentTarget, target }) => {
+    currentTarget === target && onModalClose();
   };
 
-  onBackdropClick = ({ currentTarget, target }) => {
-    currentTarget === target && this.onClose();
-  };
+  onkeydown = onEscPress;
 
-  render() {
-    return createPortal(
-      <Backdrop
-        shouldShown={this.state.isMounted}
-        onClick={this.onBackdropClick}
-      >
-        <ModalContainer>
-          <ModalTitle>{this.props.title}</ModalTitle>
-          {cloneElement(this.props.children, { onClose: this.onClose })}
-        </ModalContainer>
-      </Backdrop>,
-      document.querySelector('#modal-root')
-    );
-  }
-}
+  return createPortal(
+    <Backdrop shouldShown={isMounted} onClick={onBackdropClick}>
+      <ModalContainer>
+        <ModalTitle>{title}</ModalTitle>
+        {cloneElement(children, { onClose: onModalClose })}
+      </ModalContainer>
+    </Backdrop>,
+    document.querySelector('#modal-root')
+  );
+};
 
 Modal.propTypes = {
   title: PropTypes.string.isRequired,
   onClose: PropTypes.func.isRequired,
+  prevOnKeyDown: PropTypes.func.isRequired,
 };

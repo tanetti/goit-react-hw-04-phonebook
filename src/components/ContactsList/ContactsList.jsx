@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { Component } from 'react';
+import { useState } from 'react';
 import { sortContacts, normalizeFilterValue, normalizeNumber } from 'utils';
 import { theme } from 'constants/theme';
 import { Contact } from './Contact/Contact';
@@ -18,26 +18,19 @@ import {
   NoResultsIcon,
 } from './ContactsList.styled';
 
-export class ContactsList extends Component {
-  state = {
-    sortField: 'name',
-    isSortOrderASC: {
-      name: true,
-      number: true,
-    },
-  };
+export const ContactsList = ({ contacts, filter, onContactDelete }) => {
+  const [sortField, setSortField] = useState('name');
+  const [isSortOrderASC, setIsSortOrderASC] = useState({
+    name: true,
+    number: true,
+  });
 
-  prepareFilteredContacts = () => {
-    const normalizedFilterValue = normalizeFilterValue(this.props.filter);
+  const prepareFilteredContacts = () => {
+    const normalizedFilterValue = normalizeFilterValue(filter);
     const prepearedContacts = [];
 
-    this.props.contacts
-      .sort(
-        sortContacts(
-          this.state.sortField,
-          this.state.isSortOrderASC[this.state.sortField]
-        )
-      )
+    contacts
+      .sort(sortContacts(sortField, isSortOrderASC[sortField]))
       .forEach(contact => {
         const normalizedName = contact.name.toLowerCase();
         const normalizedNumber = normalizeNumber(contact.number);
@@ -52,118 +45,106 @@ export class ContactsList extends Component {
     return prepearedContacts;
   };
 
-  onSortButtonClick = ({ currentTarget: { value: targetSortField } }) => {
-    this.setState(prevState => {
-      if (prevState.sortField !== targetSortField)
-        return { sortField: targetSortField };
+  const onSortButtonClick = ({ currentTarget: { value: targetSortField } }) => {
+    if (sortField !== targetSortField) return setSortField(targetSortField);
 
-      return {
-        isSortOrderASC: {
-          ...prevState.isSortOrderASC,
-          [targetSortField]: !prevState.isSortOrderASC[targetSortField],
-        },
-      };
-    });
+    setIsSortOrderASC(prevIsSortOrderASC => ({
+      ...prevIsSortOrderASC,
+      [targetSortField]: !prevIsSortOrderASC[targetSortField],
+    }));
   };
 
-  render() {
-    const { onContactDelete, filter: filterValue } = this.props;
-    const preparedContacts = this.prepareFilteredContacts();
-    const isSortFieldName = this.state.sortField === 'name';
-    const isOrderByNameASC = this.state.isSortOrderASC.name;
-    const isSortFieldNumber = this.state.sortField === 'number';
-    const isOrderByNumberASC = this.state.isSortOrderASC.number;
+  const preparedContacts = prepareFilteredContacts();
 
-    const sortButtonIconSize = theme.sizes.sortButtonIcon;
-    const noResultIconSize = theme.sizes.noResultIcon;
+  const sortButtonIconSize = theme.sizes.sortButtonIcon;
+  const noResultIconSize = theme.sizes.noResultIcon;
 
-    return (
-      <ContactsTableBox>
-        <ContactsTable>
-          <thead>
-            <tr>
-              <TableHeadCell colSpan={2}>
-                Contact name
-                <SortByNameButton
-                  type="button"
-                  value="name"
-                  isSortFieldName={isSortFieldName}
-                  aria-label={`Sort contacts by contact name in ${
-                    isOrderByNameASC ? 'ascending' : 'descending'
-                  } order`}
-                  onClick={this.onSortButtonClick}
-                >
-                  <SotrByNameIconASC
-                    size={sortButtonIconSize}
-                    value={isOrderByNameASC}
-                  />
-                  <SotrByNameIconDSC
-                    size={sortButtonIconSize}
-                    value={isOrderByNameASC}
-                  />
-                </SortByNameButton>
-              </TableHeadCell>
-              <TableHeadCell colSpan={2}>
-                Phone number
-                <SortByNumberButton
-                  type="button"
-                  value="number"
-                  isSortFieldNumber={isSortFieldNumber}
-                  aria-label={`Sort contacts by phone number in ${
-                    isOrderByNumberASC ? 'ascending' : 'descending'
-                  } order`}
-                  onClick={this.onSortButtonClick}
-                >
-                  <SotrByNumberIconASC
-                    size={sortButtonIconSize}
-                    value={isOrderByNumberASC}
-                  />
-                  <SotrByNumberIconDSC
-                    size={sortButtonIconSize}
-                    value={isOrderByNumberASC}
-                  />
-                </SortByNumberButton>
-              </TableHeadCell>
-            </tr>
-          </thead>
-
-          <tbody>
-            {preparedContacts.length ? (
-              preparedContacts.map(({ id, name, number }, idx) => (
-                <Contact
-                  key={id}
-                  id={id}
-                  name={name}
-                  number={number}
-                  isLight={idx % 2 === 0}
-                  onContactDelete={onContactDelete}
+  return (
+    <ContactsTableBox>
+      <ContactsTable>
+        <thead>
+          <tr>
+            <TableHeadCell colSpan={2}>
+              Contact name
+              <SortByNameButton
+                type="button"
+                value="name"
+                isSortFieldName={sortField === 'name'}
+                aria-label={`Sort contacts by contact name in ${
+                  isSortOrderASC.name ? 'ascending' : 'descending'
+                } order`}
+                onClick={onSortButtonClick}
+              >
+                <SotrByNameIconASC
+                  size={sortButtonIconSize}
+                  value={isSortOrderASC.name}
                 />
-              ))
-            ) : filterValue ? (
-              <tr>
-                <TableDataCellEmpty colSpan={4}>
-                  <CenteredSpan>
-                    Nothing was found
-                    <NoResultsIcon size={noResultIconSize} />
-                  </CenteredSpan>
-                </TableDataCellEmpty>
-              </tr>
-            ) : (
-              <tr>
-                <TableDataCellEmpty colSpan={4}>
-                  <CenteredSpan>
-                    Phonebook is empty
-                    <NoResultsIcon size={noResultIconSize} />
-                  </CenteredSpan>
-                </TableDataCellEmpty>
-              </tr>
-            )}
-          </tbody>
-        </ContactsTable>
-      </ContactsTableBox>
-    );
-  }
-}
+                <SotrByNameIconDSC
+                  size={sortButtonIconSize}
+                  value={isSortOrderASC.name}
+                />
+              </SortByNameButton>
+            </TableHeadCell>
+            <TableHeadCell colSpan={2}>
+              Phone number
+              <SortByNumberButton
+                type="button"
+                value="number"
+                isSortFieldNumber={sortField === 'number'}
+                aria-label={`Sort contacts by phone number in ${
+                  isSortOrderASC.number ? 'ascending' : 'descending'
+                } order`}
+                onClick={onSortButtonClick}
+              >
+                <SotrByNumberIconASC
+                  size={sortButtonIconSize}
+                  value={isSortOrderASC.number}
+                />
+                <SotrByNumberIconDSC
+                  size={sortButtonIconSize}
+                  value={isSortOrderASC.number}
+                />
+              </SortByNumberButton>
+            </TableHeadCell>
+          </tr>
+        </thead>
+
+        <tbody>
+          {preparedContacts.length ? (
+            preparedContacts.map(({ id, name, number }, idx) => (
+              <Contact
+                key={id}
+                id={id}
+                name={name}
+                number={number}
+                isLight={idx % 2 === 0}
+                onContactDelete={onContactDelete}
+              />
+            ))
+          ) : filter ? (
+            <tr>
+              <TableDataCellEmpty colSpan={4}>
+                <CenteredSpan>
+                  Nothing was found
+                  <NoResultsIcon size={noResultIconSize} />
+                </CenteredSpan>
+              </TableDataCellEmpty>
+            </tr>
+          ) : (
+            <tr>
+              <TableDataCellEmpty colSpan={4}>
+                <CenteredSpan>
+                  Phonebook is empty
+                  <NoResultsIcon size={noResultIconSize} />
+                </CenteredSpan>
+              </TableDataCellEmpty>
+            </tr>
+          )}
+        </tbody>
+      </ContactsTable>
+    </ContactsTableBox>
+  );
+};
 
 ContactsList.propTypes = {
   contacts: PropTypes.array.isRequired,

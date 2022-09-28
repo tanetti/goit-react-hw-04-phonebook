@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Notify } from 'notiflix';
 import { GlobalStyles } from 'components/GlobalStyles/GlobalStyles';
 import { theme } from 'constants/theme';
@@ -32,109 +32,98 @@ Notify.init({
   },
 });
 
-export class App extends Component {
-  state = {
-    contacts: [],
-    filter: '',
+export const App = () => {
+  const [contacts, setContacts] = useState([]);
+  const [filter, setFilter] = useState('');
+  const [shouldAddContactModalShown, setShouldAddContactModalShown] =
+    useState(false);
+  const [modalActivator, setModalActivator] = useState(null);
 
-    shouldAddContactModalShown: false,
-    modalActivator: null,
-  };
+  const isContactsLoadedFromLS = useRef(false);
 
-  componentDidMount() {
+  useEffect(() => {
     const savedContacts = readContactsFromLS();
 
-    if (savedContacts) this.setState({ contacts: savedContacts });
-  }
+    savedContacts && setContacts(savedContacts);
+    isContactsLoadedFromLS.current = true;
+  }, []);
 
-  componentDidUpdate(_, { contacts: prevContacts }) {
-    const { contacts: currContacts } = this.state;
+  useEffect(() => {
+    if (!isContactsLoadedFromLS.current) return;
 
-    if (prevContacts.length !== currContacts.length)
-      writeContactsToLS(currContacts);
-  }
+    if (contacts.length) writeContactsToLS(contacts);
+  }, [contacts]);
 
-  toggleAddContactModal = evt => {
-    this.toggleAriaExpanded(
-      evt ? evt.currentTarget : this.state.modalActivator
-    );
+  const toggleAddContactModal = evt => {
+    toggleAriaExpanded(evt ? evt.currentTarget : modalActivator);
 
-    this.setState({
-      shouldAddContactModalShown: evt ? true : false,
-      modalActivator: evt ? evt.currentTarget : null,
-    });
+    setShouldAddContactModalShown(evt ? true : false);
+    setModalActivator(evt ? evt.currentTarget : null);
   };
 
-  toggleAriaExpanded = target => {
+  const toggleAriaExpanded = target => {
     if (target.ariaExpanded === 'false') return (target.ariaExpanded = true);
     target.ariaExpanded = false;
   };
 
-  addNewContact = newContact => {
-    this.setState(prevState => ({
-      contacts: [...prevState.contacts, newContact],
-    }));
+  const addNewContact = newContact => {
+    setContacts(prevContacts => [...prevContacts, newContact]);
 
     Notify.success(`New contact was successfully added`);
   };
 
-  deleteContact = id => {
-    this.setState(prevState => ({
-      contacts: prevState.contacts.filter(contact => contact.id !== id),
-    }));
+  const deleteContact = id => {
+    setContacts(prevContacts =>
+      prevContacts.filter(contact => contact.id !== id)
+    );
 
     Notify.success(`Contact was successfully deleted`);
   };
 
-  changeFilterValue = filterValue => {
-    this.setState({ filter: filterValue });
-  };
-
-  render() {
-    return (
-      <>
-        <GlobalStyles />
-        <header>
-          <HeaderContainer>
-            <ContactFilter onFilterChange={this.changeFilterValue} />
-            <AddContactButton
-              type="button"
-              aria-label="Add new contact"
-              aria-controls="modal-root"
-              aria-expanded={false}
-              onClick={this.toggleAddContactModal}
+  return (
+    <>
+      <GlobalStyles />
+      <header>
+        <HeaderContainer>
+          <ContactFilter onFilterChange={setFilter} />
+          <AddContactButton
+            type="button"
+            aria-label="Add new contact"
+            aria-controls="modal-root"
+            aria-expanded={false}
+            onClick={toggleAddContactModal}
+          >
+            <AddContactButtonIcon size={theme.sizes.addContactIcon} />
+            <AddContactButtonTitle>Add contact</AddContactButtonTitle>
+          </AddContactButton>
+          {shouldAddContactModalShown && (
+            <Modal
+              title="Add new contact"
+              onClose={toggleAddContactModal}
+              prevOnKeyDown={onkeydown}
             >
-              <AddContactButtonIcon size={theme.sizes.addContactIcon} />
-              <AddContactButtonTitle>Add contact</AddContactButtonTitle>
-            </AddContactButton>
-            {this.state.shouldAddContactModalShown && (
-              <Modal
-                title="Add new contact"
-                onClose={this.toggleAddContactModal}
-              >
-                <AddContactForm
-                  contacts={this.state.contacts}
-                  onNewContactAdd={this.addNewContact}
-                />
-              </Modal>
-            )}
-          </HeaderContainer>
-        </header>
-
-        <main>
-          <PageTitle title="My awesome phonebook" />
-          <Section>
-            <Container>
-              <SectionTitle>Phonebook</SectionTitle>
-              <ContactsList
-                contacts={this.state.contacts}
-                filter={this.state.filter}
-                onContactDelete={this.deleteContact}
+              <AddContactForm
+                contacts={contacts}
+                onNewContactAdd={addNewContact}
               />
-            </Container>
-          </Section>
-        </main>
-      </>
-    );
-  }
-}
+            </Modal>
+          )}
+        </HeaderContainer>
+      </header>
+
+      <main>
+        <PageTitle title="My awesome phonebook" />
+        <Section>
+          <Container>
+            <SectionTitle>Phonebook</SectionTitle>
+            <ContactsList
+              contacts={contacts}
+              filter={filter}
+              onContactDelete={deleteContact}
+            />
+          </Container>
+        </Section>
+      </main>
+    </>
+  );
+};
